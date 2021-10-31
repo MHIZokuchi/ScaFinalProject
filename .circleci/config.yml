@@ -1,0 +1,96 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/node:16
+        environment:
+          SERVICE_NAME: hush
+          IMAGE_SERVER: philcz16/hush-server
+          IMAGE_CLIENT: philcz16/hush-client
+
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build Hush Sever Docker image
+          command: |
+            docker build -t $IMAGE_SERVER:$TAG ./Hush_Server-master/Hush_Server-master
+            echo $DOCKER_PWD | docker login -u $DOCKER_LOGIN --password-stdin
+            docker push $IMAGE_SERVER:$TAG
+      - run:
+          name: Build Hush Client Docker image
+          command: |
+            docker build -t $IMAGE_CLIENT:$TAG ./Hush_Client-setCurrentIdBranch/Hush_Client-setCurrentIdBranch
+            echo $DOCKER_PWD | docker login -u $DOCKER_LOGIN --password-stdin
+            docker push $IMAGE_CLIENT:$TAG
+    
+  build_server:
+    docker:
+      - image: circleci/node:16
+        environment:
+          SERVICE_NAME_SERVER: hush_server
+          IMAGE_SERVER: philcz16/hush-server
+    steps:
+      - checkout
+      - setup_remote_docker 
+      
+      - run:
+          name: Build Hush Sever Docker image
+          command: |
+            docker build -t $IMAGE_SERVER:latest ./Hush_Server-master/Hush_Server-master
+            echo $DOCKER_PWD | docker login -u $DOCKER_LOGIN --password-stdin
+            docker push $IMAGE_SERVER:latest
+    filters:
+          branches:
+            only: master
+
+  build_client:
+    docker:
+      - image: circleci/node:16
+        environment:
+          SERVICE_NAME_CLIENT: hush_client
+          IMAGE_CLIENT: philcz16/hush-client
+    steps:
+      - checkout
+      - setup_remote_docker 
+      - run:
+          name: Build Hush Client Docker image
+          command: |
+            docker build -t $IMAGE_CLIENT:latest ./Hush_Client-setCurrentIdBranch/Hush_Client-setCurrentIdBranch
+            echo $DOCKER_PWD | docker login -u $DOCKER_LOGIN --password-stdin
+            docker push $IMAGE_CLIENT:latest
+    filters:
+          branches:
+            only: master
+
+  deploy:
+    requires:
+            - build_server
+            - build_client 
+    docker:
+      - image: alpine/gcloud
+        environment:
+          PROD_NAMESPACE: production
+          GOOGLE_PROJECT_ID: devop-project-12345
+    steps: 
+      - checkout
+      - run: |
+            echo $GOOGLE_APPLICATION_CREDENTIALS | gcloud auth activate-service-account --key-file=-
+            gcloud --quiet config set project devop-project-12345
+            gcloud --quiet config set compute/zone us-east1-d 
+            gcloud --quiet container clusters get-credentials phil-prod --zone europe-west1-b
+            kubectl apply -f k8s/*.yaml -n $PROD_NAMESPACE
+
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build_server
+      - build_client
+      - deploy:
+          requires:
+            - build_server
+            - build_client
+      

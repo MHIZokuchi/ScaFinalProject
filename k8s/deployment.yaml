@@ -1,0 +1,81 @@
+# hush-server service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: hush-server-v1
+  labels:
+    app: hush-server
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 5300
+    targetPort: 5300
+    name: hush-server-service
+  selector:
+    app: hush-server
+
+#hush-server deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hush-server-v1
+  labels:
+    app: hush-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hush-server
+  template:
+    metadata:
+      labels:
+        app: hush-server
+    spec:
+      containers:
+      - name: hush-server
+        image: philcz16/hush-server
+        ports:
+        - containerPort: 5300
+          name: hush-server
+# apiexercise service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: hush-client-v1
+  labels:
+    app: hush-client
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
+    name: hush-client-service
+  selector:
+    app: hush-client
+#apiexercise deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hush-client-v1
+  labels:
+    app: hush-client
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hush-client
+  template:
+    metadata:
+      labels:
+        app: hush-client
+    spec:
+      containers:
+      - name: hush-client
+        image: philcz16/hush-client
+        ports:
+        - containerPort: 80
+          name: hush-client

@@ -1,0 +1,25 @@
+version: '3'
+services:
+  hush-server:
+    #restart: always
+    container_name: hush-server
+    build: ./Hush_Server-master/Hush_Server-master
+    ports:
+      - 5300:5300
+    volumes:
+      - ./server:/code
+
+  hush-client:
+    #restart: always
+    container_name: hush-client
+    build: ./Hush_Client-setCurrentIdBranch/Hush_Client-setCurrentIdBranch
+    depends_on: 
+      - hush-server
+    ports:
+      - 80:3000
+    volumes:
+      - ./client:/code
+    
+
+networks: 
+  monitoring:
